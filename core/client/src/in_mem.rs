@@ -90,6 +90,7 @@ struct BlockchainStorage<Block: BlockT> {
 	best_number: <<Block as BlockT>::Header as HeaderT>::Number,
 	genesis_hash: Block::Hash,
 	cht_roots: HashMap<NumberFor<Block>, Block::Hash>,
+	leaves: Vec<Block::Hash>,
 }
 
 /// In-memory blockchain. Supports concurrent reads.
@@ -135,6 +136,7 @@ impl<Block: BlockT> Blockchain<Block> {
 				best_number: Zero::zero(),
 				genesis_hash: Default::default(),
 				cht_roots: HashMap::new(),
+				leaves: Vec::new(),
 			}));
 		Blockchain {
 			storage: storage.clone(),
@@ -158,6 +160,14 @@ impl<Block: BlockT> Blockchain<Block> {
 		let mut storage = self.storage.write();
 		storage.blocks.insert(hash.clone(), StoredBlock::new(header, body, justification));
 		storage.hashes.insert(number, hash.clone());
+
+		// for (i, leave) in storage.leaves.iter().position(
+		//
+		// }
+		// TODO [snd] iterate through leaves until you find the index
+		
+		// TODO [snd] insert where?
+		// storage.leaves.insert(hash);
 		if is_new_best {
 			storage.best_hash = hash.clone();
 			storage.best_number = number.clone();
@@ -237,6 +247,11 @@ impl<Block: BlockT> blockchain::Backend<Block> for Blockchain<Block> {
 
 	fn cache(&self) -> Option<&blockchain::Cache<Block>> {
 		Some(&self.cache)
+	}
+
+	fn leaves(&self) -> error::Result<Vec<Block::Hash>> {
+		// TODO [snd] get rid of this clone
+		Ok(self.storage.read().leaves.clone())
 	}
 }
 
