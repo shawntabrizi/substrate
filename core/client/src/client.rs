@@ -849,5 +849,17 @@ mod tests {
 			client.json_metadata(&BlockId::Number(1)).unwrap(),
 			r#"{ "events": { "name": "Test", "events": { "event": hallo } } }"#
 		);
+
+	#[test]
+	fn best_chain_containing_single_block() {
+		let client = test_client::new();
+
+		let mut builder = client.new_block().unwrap();
+		let block = builder.bake().unwrap();
+		let block_hash = block.hash();
+
+		client.justify_and_import(BlockOrigin::Own, block).unwrap();
+
+		assert_eq!(block_hash.clone(), client.best_chain_containing_block_hash(block_hash.clone()).unwrap());
 	}
 }
