@@ -27,7 +27,7 @@ use client::cht;
 use client::error::{ErrorKind as ClientErrorKind, Result as ClientResult};
 use client::light::blockchain::Storage as LightBlockchainStorage;
 use codec::{Decode, Encode};
-use primitives::{AuthorityId, H256, Blake2Hasher};
+use primitives::{AuthorityId, Blake2Hasher};
 use runtime_primitives::generic::BlockId;
 use runtime_primitives::traits::{Block as BlockT, Header as HeaderT, Hash, HashFor,
 	Zero, One, As, NumberFor};
@@ -168,7 +168,6 @@ impl<Block> BlockchainHeaderBackend<Block> for LightStorage<Block>
 impl<Block> LightBlockchainStorage<Block> for LightStorage<Block>
 	where
 		Block: BlockT,
-		Block::Hash: From<H256>,
 {
 	fn import_header(&self, is_new_best: bool, header: Block::Header, authorities: Option<Vec<AuthorityId>>) -> ClientResult<()> {
 		let mut transaction = DBTransaction::new();
@@ -203,7 +202,7 @@ impl<Block> LightBlockchainStorage<Block> for LightStorage<Block>
 		// build new CHT if required
 		if let Some(new_cht_number) = cht::is_build_required(cht::SIZE, *header.number()) {
 			let new_cht_start: NumberFor<Block> = cht::start_number(cht::SIZE, new_cht_number);
-			let new_cht_root: Option<Block::Hash> = cht::compute_root::<Block::Header, Blake2Hasher, _>(
+			let new_cht_root = cht::compute_root::<Block::Header, Blake2Hasher, _>(
 				cht::SIZE, new_cht_number, (new_cht_start.as_()..)
 				.map(|num| self.hash(As::sa(num)).unwrap_or_default()));
 
