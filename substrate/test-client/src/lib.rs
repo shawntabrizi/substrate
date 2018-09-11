@@ -19,7 +19,7 @@
 #![warn(missing_docs)]
 
 extern crate rhododendron;
-extern crate substrate_bft as bft;
+extern crate substrate_consensus_rhd as bft;
 extern crate substrate_codec as codec;
 extern crate substrate_primitives as primitives;
 extern crate substrate_runtime_support as runtime_support;

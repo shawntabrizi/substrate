@@ -1,9 +1,9 @@
 [workspace]
 members = [
-	"substrate/bft",
 	"substrate/cli",
 	"substrate/client",
 	"substrate/client/db",
+	"substrate/consensus/rhd",
 	"substrate/codec",
 	"substrate/codec/derive",
 	"substrate/environmental",

@@ -24,7 +24,7 @@ extern crate substrate_runtime_io as runtime_io;
 extern crate substrate_runtime_primitives as runtime_primitives;
 
 #[cfg(test)]
-extern crate substrate_bft;
+extern crate substrate_consensus_rhd;
 #[cfg(test)]
 extern crate substrate_keyring as keyring;
 #[cfg(test)]
@@ -95,7 +95,7 @@ mod tests {
 	type Block = RawBlock<u64>;
 
 	fn sign_prepare(key: &ed25519::Pair, round: u32, hash: H256, parent_hash: H256) -> (H256, Signature) {
-		let msg = substrate_bft::sign_message::<Block>(
+		let msg = substrate_consensus_rhd::sign_message::<Block>(
 			rhododendron::Message::Vote(rhododendron::Vote::Prepare(round as _, hash)),
 			key,
 			parent_hash
@@ -108,7 +108,7 @@ mod tests {
 	}
 
 	fn sign_commit(key: &ed25519::Pair, round: u32, hash: H256, parent_hash: H256) -> (H256, Signature) {
-		let msg = substrate_bft::sign_message::<Block>(
+		let msg = substrate_consensus_rhd::sign_message::<Block>(
 			rhododendron::Message::Vote(rhododendron::Vote::Commit(round as _, hash)),
 			key,
 			parent_hash

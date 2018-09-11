@@ -8,7 +8,7 @@ description = "Substrate demo networking protocol"
 demo-api = { path = "../api" }
 demo-consensus = { path = "../consensus" }
 demo-primitives = { path = "../primitives" }
-substrate-bft = { path = "../../substrate/bft" }
+substrate-consensus-rhd = { path = "../../substrate/consensus/rhd" }
 substrate-network = { path = "../../substrate/network" }
 ed25519 = { path = "../../substrate/ed25519" }
 futures = "0.1"

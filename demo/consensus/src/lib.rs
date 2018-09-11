@@ -23,8 +23,8 @@ extern crate demo_transaction_pool as transaction_pool;
 extern crate demo_runtime;
 extern crate demo_primitives;
 
-extern crate substrate_bft as bft;
 extern crate substrate_codec as codec;
+extern crate substrate_consensus_rhd as bft;
 extern crate substrate_primitives as primitives;
 extern crate substrate_runtime_support as runtime_support;
 extern crate substrate_runtime_primitives as runtime_primitives;

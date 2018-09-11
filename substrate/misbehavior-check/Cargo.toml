@@ -10,7 +10,7 @@ substrate-runtime-primitives = { path = "../runtime/primitives", default-feature
 substrate-runtime-io = { path = "../runtime-io", default-features = false }
 
 [dev-dependencies]
-substrate-bft = { path = "../bft" }
+substrate-consensus-rhd = { path = "../consensus/rhd" }
 rhododendron = "0.3"
 substrate-keyring = { path = "../keyring" }
 
