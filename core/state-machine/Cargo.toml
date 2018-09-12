@@ -14,7 +14,7 @@ hashdb = "0.2.1"
 memorydb = "0.2.1"
 patricia-trie = "0.2.1"
 triehash = "0.2"
-rlp = "0.2.4"
+rlp = "0.2"
 
 substrate-primitives = { path = "../primitives", version = "0.1.0" }
 parity-codec = { path = "../../codec", default_features = false }
