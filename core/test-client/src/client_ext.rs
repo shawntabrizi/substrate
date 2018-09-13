@@ -18,7 +18,7 @@
 
 use client::{self, Client};
 use keyring::Keyring;
-use primitives::{KeccakHasher, RlpCodec};
+use primitives::{Blake2Hasher, RlpCodec};
 use runtime;
 use bft;
 
@@ -33,8 +33,8 @@ pub trait TestClient {
 
 impl<B, E> TestClient for Client<B, E, runtime::Block>
     where
-        B: client::backend::Backend<runtime::Block, KeccakHasher, RlpCodec>,
-        E: client::CallExecutor<runtime::Block, KeccakHasher, RlpCodec>
+        B: client::backend::Backend<runtime::Block, Blake2Hasher, RlpCodec>,
+        E: client::CallExecutor<runtime::Block, Blake2Hasher, RlpCodec>
 {
 	fn justify_and_import(&self, origin: client::BlockOrigin, block: runtime::Block) -> client::error::Result<()> {
 		let justification = fake_justify(&block.header);
