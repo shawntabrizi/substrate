@@ -116,7 +116,7 @@ decl_storage! {
 		pub Members: Vec<T::AccountId>;
 		/// The member who provides the default vote for any other members that do not vote before
 		/// the timeout. If None, then no member has that privilege.
-		pub Prime get(fn prime): Option<T::AccountId>;
+		pub Prime: Option<T::AccountId>;
 	}
 	add_extra_genesis {
 		config(phantom): sp_std::marker::PhantomData<I>;
@@ -334,6 +334,10 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		<Self as ChangeMembers<T::AccountId>>::current_members()
 	}
 
+	pub fn prime() -> Option<T::AccountId> {
+		<Self as ChangeMembers<T::AccountId>>::current_prime()
+	}
+
 	pub fn is_member(who: &T::AccountId) -> bool {
 		Self::members().contains(who)
 	}
@@ -382,6 +386,10 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 impl<T: Trait<I>, I: Instance> ChangeMembers<T::AccountId> for Module<T, I> {
 	fn current_members() -> Vec<T::AccountId> {
 		Members::<T, I>::get()
+	}
+
+	fn current_prime() -> Option<T::AccountId> {
+		Prime::<T, I>::get()
 	}
 
 	fn change_members_sorted(

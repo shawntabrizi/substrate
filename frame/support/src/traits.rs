@@ -875,12 +875,16 @@ pub trait ChangeMembers<AccountId: Clone + Ord> {
 		(incoming, outgoing)
 	}
 
+	/// Get the current prime member.
+	fn current_prime() -> Option<AccountId>;
+
 	/// Set the prime member.
 	fn set_prime(_prime: Option<AccountId>) {}
 }
 
 impl<T: Clone + Ord> ChangeMembers<T> for () {
 	fn current_members() -> Vec<T> { Vec::new() }
+	fn current_prime() -> Option<T> { None }
 	fn change_members(_: &[T], _: &[T], _: Vec<T>) {}
 	fn change_members_sorted(_: &[T], _: &[T], _: &[T]) {}
 	fn set_members_sorted(_: &[T], _: &[T]) {}
