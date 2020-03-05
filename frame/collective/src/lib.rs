@@ -113,7 +113,7 @@ decl_storage! {
 		/// Proposals so far.
 		pub ProposalCount get(fn proposal_count): u32;
 		/// The current members of the collective. This is stored sorted (just by value).
-		pub Members get(fn members): Vec<T::AccountId>;
+		pub Members: Vec<T::AccountId>;
 		/// The member who provides the default vote for any other members that do not vote before
 		/// the timeout. If None, then no member has that privilege.
 		pub Prime get(fn prime): Option<T::AccountId>;
@@ -330,6 +330,10 @@ decl_module! {
 }
 
 impl<T: Trait<I>, I: Instance> Module<T, I> {
+	pub fn members() -> Vec<T::AccountId> {
+		<Self as ChangeMembers<T::AccountId>>::current_members()
+	}
+
 	pub fn is_member(who: &T::AccountId) -> bool {
 		Self::members().contains(who)
 	}
@@ -376,6 +380,10 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 }
 
 impl<T: Trait<I>, I: Instance> ChangeMembers<T::AccountId> for Module<T, I> {
+	fn current_members() -> Vec<T::AccountId> {
+		Members::<T, I>::get()
+	}
+
 	fn change_members_sorted(
 		_incoming: &[T::AccountId],
 		outgoing: &[T::AccountId],
