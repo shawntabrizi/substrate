@@ -62,10 +62,10 @@ pub trait Trait<I=DefaultInstance>: frame_system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait<I>, I: Instance=DefaultInstance> as Membership {
 		/// The current membership, stored as an ordered Vec.
-		Members get(fn members): Vec<T::AccountId>;
+		Members: Vec<T::AccountId>;
 
 		/// The current prime member, if one exists.
-		Prime get(fn prime): Option<T::AccountId>;
+		Prime: Option<T::AccountId>;
 	}
 	add_extra_genesis {
 		config(members): Vec<T::AccountId>;
@@ -74,7 +74,6 @@ decl_storage! {
 			let mut members = config.members.clone();
 			members.sort();
 			T::MembershipInitialized::initialize_members(&members);
-			<Members<T, I>>::put(members);
 		})
 	}
 }
@@ -125,10 +124,9 @@ decl_module! {
 				.map(|_| ())
 				.or_else(ensure_root)?;
 
-			let mut members = <Members<T, I>>::get();
+			let mut members = Self::members();
 			let location = members.binary_search(&who).err().ok_or(Error::<T, I>::AlreadyMember)?;
 			members.insert(location, who.clone());
-			<Members<T, I>>::put(&members);
 
 			T::MembershipChanged::change_members_sorted(&[who], &[], &members[..]);
 
@@ -144,10 +142,9 @@ decl_module! {
 				.map(|_| ())
 				.or_else(ensure_root)?;
 
-			let mut members = <Members<T, I>>::get();
+			let mut members = Self::members();
 			let location = members.binary_search(&who).ok().ok_or(Error::<T, I>::NotMember)?;
 			members.remove(location);
-			<Members<T, I>>::put(&members);
 
 			T::MembershipChanged::change_members_sorted(&[], &[who], &members[..]);
 			Self::rejig_prime(&members);
@@ -168,12 +165,11 @@ decl_module! {
 
 			if remove == add { return Ok(()) }
 
-			let mut members = <Members<T, I>>::get();
+			let mut members = Self::members();
 			let location = members.binary_search(&remove).ok().ok_or(Error::<T, I>::NotMember)?;
 			let _ = members.binary_search(&add).err().ok_or(Error::<T, I>::AlreadyMember)?;
 			members[location] = add.clone();
 			members.sort();
-			<Members<T, I>>::put(&members);
 
 			T::MembershipChanged::change_members_sorted(
 				&[add],
@@ -217,12 +213,11 @@ decl_module! {
 			let remove = ensure_signed(origin)?;
 
 			if remove != new {
-				let mut members = <Members<T, I>>::get();
+				let mut members = Self::members();
 				let location = members.binary_search(&remove).ok().ok_or(Error::<T, I>::NotMember)?;
 				let _ = members.binary_search(&new).err().ok_or(Error::<T, I>::AlreadyMember)?;
 				members[location] = new.clone();
 				members.sort();
-				<Members<T, I>>::put(&members);
 
 				T::MembershipChanged::change_members_sorted(
 					&[new.clone()],
@@ -230,8 +225,7 @@ decl_module! {
 					&members[..],
 				);
 
-				if Prime::<T, I>::get() == Some(remove) {
-					Prime::<T, I>::put(&new);
+				if Self::prime() == Some(remove) {
 					T::MembershipChanged::set_prime(Some(new));
 				}
 			}
@@ -246,7 +240,6 @@ decl_module! {
 				.map(|_| ())
 				.or_else(ensure_root)?;
 			Self::members().binary_search(&who).ok().ok_or(Error::<T, I>::NotMember)?;
-			Prime::<T, I>::put(&who);
 			T::MembershipChanged::set_prime(Some(who));
 		}
 
@@ -256,7 +249,6 @@ decl_module! {
 			T::PrimeOrigin::try_origin(origin)
 				.map(|_| ())
 				.or_else(ensure_root)?;
-			Prime::<T, I>::kill();
 			T::MembershipChanged::set_prime(None);
 		}
 	}
@@ -264,7 +256,7 @@ decl_module! {
 
 impl<T: Trait<I>, I: Instance> Module<T, I> {
 	fn rejig_prime(members: &[T::AccountId]) {
-		if let Some(prime) = Prime::<T, I>::get() {
+		if let Some(prime) = Self::prime() {
 			match members.binary_search(&prime) {
 				Ok(_) => T::MembershipChanged::set_prime(Some(prime)),
 				Err(_) => Prime::<T, I>::kill(),
@@ -273,11 +265,43 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	}
 }
 
+
+impl<T: Trait<I>, I: Instance> ChangeMembers<T::AccountId> for Module<T, I> {
+	fn members() -> Vec<T::AccountId> {
+		Members::<T, I>::get()
+	}
+
+	fn prime() -> Option<T::AccountId> {
+		Prime::<T, I>::get()
+	}
+
+	fn change_members_sorted(
+		_incoming: &[T::AccountId],
+		_outgoing: &[T::AccountId],
+		new: &[T::AccountId],
+	) {
+		Members::<T, I>::put(new);
+		Prime::<T, I>::kill();
+	}
+
+	fn set_prime(prime: Option<T::AccountId>) {
+		Prime::<T, I>::set(prime);
+	}
+}
+
+impl<T: Trait<I>, I: Instance> InitializeMembers<T::AccountId> for Module<T, I> {
+	fn initialize_members(members: &[T::AccountId]) {
+		if !members.is_empty() {
+			assert!(<Members<T, I>>::get().is_empty(), "Members are already initialized!");
+			<Members<T, I>>::put(members);
+		}
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
 
-	use std::cell::RefCell;
 	use frame_support::{
 		assert_ok, assert_noop, impl_outer_origin, parameter_types, weights::Weight,
 		ord_parameter_types
@@ -332,35 +356,6 @@ mod tests {
 		pub const Five: u64 = 5;
 	}
 
-	thread_local! {
-		static MEMBERS: RefCell<Vec<u64>> = RefCell::new(vec![]);
-		static PRIME: RefCell<Option<u64>> = RefCell::new(None);
-	}
-
-	pub struct TestChangeMembers;
-	impl ChangeMembers<u64> for TestChangeMembers {
-		fn change_members_sorted(incoming: &[u64], outgoing: &[u64], new: &[u64]) {
-			let mut old_plus_incoming = MEMBERS.with(|m| m.borrow().to_vec());
-			old_plus_incoming.extend_from_slice(incoming);
-			old_plus_incoming.sort();
-			let mut new_plus_outgoing = new.to_vec();
-			new_plus_outgoing.extend_from_slice(outgoing);
-			new_plus_outgoing.sort();
-			assert_eq!(old_plus_incoming, new_plus_outgoing);
-
-			MEMBERS.with(|m| *m.borrow_mut() = new.to_vec());
-			PRIME.with(|p| *p.borrow_mut() = None);
-		}
-		fn set_prime(who: Option<u64>) {
-			PRIME.with(|p| *p.borrow_mut() = who);
-		}
-	}
-	impl InitializeMembers<u64> for TestChangeMembers {
-		fn initialize_members(members: &[u64]) {
-			MEMBERS.with(|m| *m.borrow_mut() = members.to_vec());
-		}
-	}
-
 	impl Trait for Test {
 		type Event = ();
 		type AddOrigin = EnsureSignedBy<One, u64>;
@@ -368,8 +363,8 @@ mod tests {
 		type SwapOrigin = EnsureSignedBy<Three, u64>;
 		type ResetOrigin = EnsureSignedBy<Four, u64>;
 		type PrimeOrigin = EnsureSignedBy<Five, u64>;
-		type MembershipInitialized = TestChangeMembers;
-		type MembershipChanged = TestChangeMembers;
+		type MembershipInitialized = Module<Test>;
+		type MembershipChanged = Module<Test>;
 	}
 
 	type Membership = Module<Test>;
@@ -390,7 +385,6 @@ mod tests {
 	fn query_membership_works() {
 		new_test_ext().execute_with(|| {
 			assert_eq!(Membership::members(), vec![10, 20, 30]);
-			assert_eq!(MEMBERS.with(|m| m.borrow().clone()), vec![10, 20, 30]);
 		});
 	}
 
@@ -401,11 +395,9 @@ mod tests {
 			assert_noop!(Membership::set_prime(Origin::signed(5), 15), Error::<Test, _>::NotMember);
 			assert_ok!(Membership::set_prime(Origin::signed(5), 20));
 			assert_eq!(Membership::prime(), Some(20));
-			assert_eq!(PRIME.with(|m| *m.borrow()), Membership::prime());
 
 			assert_ok!(Membership::clear_prime(Origin::signed(5)));
 			assert_eq!(Membership::prime(), None);
-			assert_eq!(PRIME.with(|m| *m.borrow()), Membership::prime());
 		});
 	}
 
@@ -416,7 +408,6 @@ mod tests {
 			assert_noop!(Membership::add_member(Origin::signed(1), 10), Error::<Test, _>::AlreadyMember);
 			assert_ok!(Membership::add_member(Origin::signed(1), 15));
 			assert_eq!(Membership::members(), vec![10, 15, 20, 30]);
-			assert_eq!(MEMBERS.with(|m| m.borrow().clone()), Membership::members());
 		});
 	}
 
@@ -428,9 +419,7 @@ mod tests {
 			assert_ok!(Membership::set_prime(Origin::signed(5), 20));
 			assert_ok!(Membership::remove_member(Origin::signed(2), 20));
 			assert_eq!(Membership::members(), vec![10, 30]);
-			assert_eq!(MEMBERS.with(|m| m.borrow().clone()), Membership::members());
 			assert_eq!(Membership::prime(), None);
-			assert_eq!(PRIME.with(|m| *m.borrow()), Membership::prime());
 		});
 	}
 
@@ -445,14 +434,11 @@ mod tests {
 			assert_ok!(Membership::swap_member(Origin::signed(3), 20, 20));
 			assert_eq!(Membership::members(), vec![10, 20, 30]);
 			assert_eq!(Membership::prime(), Some(20));
-			assert_eq!(PRIME.with(|m| *m.borrow()), Membership::prime());
 
 			assert_ok!(Membership::set_prime(Origin::signed(5), 10));
 			assert_ok!(Membership::swap_member(Origin::signed(3), 10, 25));
 			assert_eq!(Membership::members(), vec![20, 25, 30]);
-			assert_eq!(MEMBERS.with(|m| m.borrow().clone()), Membership::members());
 			assert_eq!(Membership::prime(), None);
-			assert_eq!(PRIME.with(|m| *m.borrow()), Membership::prime());
 		});
 	}
 
@@ -461,7 +447,6 @@ mod tests {
 		new_test_ext().execute_with(|| {
 			assert_ok!(Membership::swap_member(Origin::signed(3), 10, 5));
 			assert_eq!(Membership::members(), vec![5, 20, 30]);
-			assert_eq!(MEMBERS.with(|m| m.borrow().clone()), Membership::members());
 		});
 	}
 
@@ -473,9 +458,7 @@ mod tests {
 			assert_noop!(Membership::change_key(Origin::signed(10), 20), Error::<Test, _>::AlreadyMember);
 			assert_ok!(Membership::change_key(Origin::signed(10), 40));
 			assert_eq!(Membership::members(), vec![20, 30, 40]);
-			assert_eq!(MEMBERS.with(|m| m.borrow().clone()), Membership::members());
 			assert_eq!(Membership::prime(), Some(40));
-			assert_eq!(PRIME.with(|m| *m.borrow()), Membership::prime());
 		});
 	}
 
@@ -484,7 +467,6 @@ mod tests {
 		new_test_ext().execute_with(|| {
 			assert_ok!(Membership::change_key(Origin::signed(10), 5));
 			assert_eq!(Membership::members(), vec![5, 20, 30]);
-			assert_eq!(MEMBERS.with(|m| m.borrow().clone()), Membership::members());
 		});
 	}
 
@@ -496,15 +478,11 @@ mod tests {
 
 			assert_ok!(Membership::reset_members(Origin::signed(4), vec![20, 40, 30]));
 			assert_eq!(Membership::members(), vec![20, 30, 40]);
-			assert_eq!(MEMBERS.with(|m| m.borrow().clone()), Membership::members());
 			assert_eq!(Membership::prime(), Some(20));
-			assert_eq!(PRIME.with(|m| *m.borrow()), Membership::prime());
 
 			assert_ok!(Membership::reset_members(Origin::signed(4), vec![10, 40, 30]));
 			assert_eq!(Membership::members(), vec![10, 30, 40]);
-			assert_eq!(MEMBERS.with(|m| m.borrow().clone()), Membership::members());
 			assert_eq!(Membership::prime(), None);
-			assert_eq!(PRIME.with(|m| *m.borrow()), Membership::prime());
 		});
 	}
 }

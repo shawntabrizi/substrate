@@ -807,7 +807,7 @@ impl WithdrawReasons {
 /// Trait for type that can handle incremental changes to a set of account IDs.
 pub trait ChangeMembers<AccountId: Clone + Ord> {
 	/// Get the current set of members.
-	fn current_members() -> Vec<AccountId>;
+	fn members() -> Vec<AccountId>;
 
 	/// A number of members `incoming` just joined the set and replaced some `outgoing` ones. The
 	/// new set is given by `new`, and need not be sorted.
@@ -876,15 +876,15 @@ pub trait ChangeMembers<AccountId: Clone + Ord> {
 	}
 
 	/// Get the current prime member.
-	fn current_prime() -> Option<AccountId>;
+	fn prime() -> Option<AccountId>;
 
 	/// Set the prime member.
 	fn set_prime(_prime: Option<AccountId>) {}
 }
 
 impl<T: Clone + Ord> ChangeMembers<T> for () {
-	fn current_members() -> Vec<T> { Vec::new() }
-	fn current_prime() -> Option<T> { None }
+	fn members() -> Vec<T> { Vec::new() }
+	fn prime() -> Option<T> { None }
 	fn change_members(_: &[T], _: &[T], _: Vec<T>) {}
 	fn change_members_sorted(_: &[T], _: &[T], _: &[T]) {}
 	fn set_members_sorted(_: &[T], _: &[T]) {}
