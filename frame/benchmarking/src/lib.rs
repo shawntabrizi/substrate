@@ -477,7 +477,13 @@ macro_rules! impl_benchmark {
 							let finish_storage_root = $crate::benchmarking::current_time();
 							let elapsed_storage_root = finish_storage_root - start_storage_root;
 
-							results.push((c.clone(), elapsed_extrinsic, elapsed_storage_root));
+							// Time `commit_db` to emulate storage write (this is a bad overestimation)
+							let start_commit_db = $crate::benchmarking::current_time();
+							$crate::benchmarking::commit_db();
+							let finish_commit_db = $crate::benchmarking::current_time();
+							let elapsed_commit_db = finish_commit_db - start_commit_db;
+
+							results.push((c.clone(), elapsed_extrinsic, elapsed_storage_root, elapsed_commit_db));
 
 							// Wipe the DB back to the genesis state.
 							$crate::benchmarking::wipe_db();
