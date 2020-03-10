@@ -413,7 +413,7 @@ decl_module! {
 			ensure!(threshold as usize <= friends.len(), Error::<T>::NotEnoughFriends);
 			let max_friends = T::MaxFriends::get() as usize;
 			ensure!(friends.len() <= max_friends, Error::<T>::MaxFriends);
-			ensure!(Self::is_sorted_and_unique(&friends), Error::<T>::NotSorted);
+			ensure!(is_sorted_and_unique::<T>(&friends), Error::<T>::NotSorted);
 			// Total deposit is base fee + number of friends * factor fee
 			let friend_deposit = T::FriendDepositFactor::get()
 				.checked_mul(&friends.len().saturated_into())
@@ -512,7 +512,7 @@ decl_module! {
 			// Get the active recovery process for the rescuer.
 			let mut active_recovery = Self::active_recovery(&lost, &rescuer).ok_or(Error::<T>::NotStarted)?;
 			// Make sure the voter is a friend
-			ensure!(Self::is_friend(&recovery_config.friends, &who), Error::<T>::NotFriend);
+			ensure!(is_friend::<T>(&recovery_config.friends, &who), Error::<T>::NotFriend);
 			// Either insert the vouch, or return an error that the user already vouched.
 			match active_recovery.friends.binary_search(&who) {
 				Ok(_pos) => Err(Error::<T>::AlreadyVouched)?,
@@ -655,14 +655,12 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
-	/// Check that friends list is sorted and has no duplicates.
-	fn is_sorted_and_unique(friends: &Vec<T::AccountId>) -> bool {
-		friends.windows(2).all(|w| w[0] < w[1])
-	}
+/// Check that friends list is sorted and has no duplicates.
+fn is_sorted_and_unique<T: Trait>(friends: &[T::AccountId]) -> bool {
+	friends.windows(2).all(|w| w[0] < w[1])
+}
 
-	/// Check that a user is a friend in the friends list.
-	fn is_friend(friends: &Vec<T::AccountId>, friend: &T::AccountId) -> bool {
-		friends.binary_search(&friend).is_ok()
-	}
+/// Check that a user is a friend in the friends list.
+fn is_friend<T: Trait>(friends: &[T::AccountId], friend: &T::AccountId) -> bool {
+	friends.binary_search(&friend).is_ok()
 }

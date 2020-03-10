@@ -1330,7 +1330,7 @@ decl_module! {
 				.or_else(ensure_root)?;
 
 			ensure!(!slash_indices.is_empty(), Error::<T>::EmptyTargets);
-			ensure!(Self::is_sorted_and_unique(&slash_indices), Error::<T>::NotSortedAndUnique);
+			ensure!(is_sorted_and_unique(&slash_indices), Error::<T>::NotSortedAndUnique);
 
 			let mut unapplied = <Self as Store>::UnappliedSlashes::get(&era);
 			let last_item = slash_indices[slash_indices.len() - 1];
@@ -1454,11 +1454,6 @@ impl<T: Trait> Module<T> {
 	/// The total balance that can be slashed from a stash account as of right now.
 	pub fn slashable_balance_of(stash: &T::AccountId) -> BalanceOf<T> {
 		Self::bonded(stash).and_then(Self::ledger).map(|l| l.active).unwrap_or_default()
-	}
-
-	/// Check that list is sorted and has no duplicates.
-	fn is_sorted_and_unique(list: &Vec<u32>) -> bool {
-		list.windows(2).all(|w| w[0] < w[1])
 	}
 
 	// MUTABLES (DANGEROUS)
@@ -2165,4 +2160,9 @@ impl<T, Reporter, Offender, R, O> ReportOffence<Reporter, Offender, O>
 			Ok(())
 		}
 	}
+}
+
+/// Check that list is sorted and has no duplicates.
+fn is_sorted_and_unique(list: &[u32]) -> bool {
+	list.windows(2).all(|w| w[0] < w[1])
 }

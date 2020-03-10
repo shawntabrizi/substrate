@@ -1225,19 +1225,19 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	}
 
 	/// Check a user is a bid.
-	fn is_bid(bids: &Vec<Bid<T::AccountId, BalanceOf<T, I>>>, who: &T::AccountId) -> bool {
+	fn is_bid(bids: &[Bid<T::AccountId, BalanceOf<T, I>>], who: &T::AccountId) -> bool {
 		// Bids are ordered by `value`, so we cannot binary search for a user.
 		bids.iter().find(|bid| bid.who == *who).is_some()
 	}
 
 	/// Check a user is a candidate.
-	fn is_candidate(candidates: &Vec<Bid<T::AccountId, BalanceOf<T, I>>>, who: &T::AccountId) -> bool {
+	fn is_candidate(candidates: &[Bid<T::AccountId, BalanceOf<T, I>>], who: &T::AccountId) -> bool {
 		// Looking up a candidate is the same as looking up a bid
 		Self::is_bid(candidates, who)
 	}
 
 	/// Check a user is a member.
-	fn is_member(members: &Vec<T::AccountId>, who: &T::AccountId) -> bool {
+	fn is_member(members: &[T::AccountId], who: &T::AccountId) -> bool {
 		members.binary_search(who).is_ok()
 	}
 
