@@ -204,6 +204,16 @@ pub trait StorageMap<K: FullEncode, V: FullCodec> {
 		where V: codec::DecodeLength + Len;
 }
 
+/// A strongly-typed map in storage whose keys and values can be iterated over.
+pub trait IterableStorageMap<K: FullEncode, V: FullCodec>: StorageMap<K, V> {
+	/// The type that iterates over all `(key, value)`.
+	type Iterator: Iterator<Item = (K, V)>;
+
+	/// Enumerate all elements in the map in no particular order. If you alter the map while doing
+	/// this, you'll get undefined results.
+	fn iter() -> Self::Iterator;
+}
+
 /// A strongly-typed linked map in storage.
 ///
 /// Similar to `StorageMap` but allows to enumerate other elements and doesn't implement append.
@@ -440,7 +450,7 @@ pub trait StoragePrefixedMap<Value: FullCodec> {
 	}
 
 	/// Iter over all value of the storage.
-	fn iter() -> PrefixIterator<Value> {
+	fn iter_values() -> PrefixIterator<Value> {
 		let prefix = Self::final_prefix();
 		PrefixIterator {
 			prefix: prefix.to_vec(),
