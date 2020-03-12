@@ -18,6 +18,27 @@
 
 use super::*;
 
+/// Start timing with the given name.
+#[macro_export]
+macro_rules! t_start {
+	($name:ident) => {
+		let $name = std::time::Instant::now();
+	};
+}
+
+/// Stop and print timing with the given name.
+#[macro_export]
+macro_rules! t_stop {
+	($name:tt) => {
+		eprintln!(
+			"++ {} took {}ms.",
+			stringify!($name),
+			$name.elapsed().as_millis(),
+		);
+	};
+}
+
+
 use frame_system::RawOrigin;
 use frame_benchmarking::{benchmarks, account};
 use sp_runtime::traits::One;
@@ -70,6 +91,7 @@ fn create_validators<T: Trait>(max: u32) -> Result<Vec<<T::Lookup as StaticLooku
 
 // This function generates v validators each of whom have n nominators ready for a new era.
 pub fn create_validators_with_nominators_for_era<T: Trait>(v: u32, n: u32) -> Result<(), &'static str> {
+	t_start!(create_validators_with_nominators_for_era_start);
 	let mut validators: Vec<T::AccountId> = Vec::new();
 
 	// Create v validators
@@ -88,9 +110,10 @@ pub fn create_validators_with_nominators_for_era<T: Trait>(v: u32, n: u32) -> Re
 			Staking::<T>::nominate(RawOrigin::Signed(n_controller.clone()).into(), vec![stash_lookup.clone()])?;
 		}
 	}
-	
+
 	ValidatorCount::put(v);
 
+	t_stop!(create_validators_with_nominators_for_era_start);
 	Ok(())
 }
 
@@ -121,9 +144,9 @@ pub fn create_validator_with_nominators<T: Trait>(n: u32, upper_bound: u32) -> R
 			Staking::<T>::nominate(RawOrigin::Signed(n_controller.clone()).into(), vec![stash_lookup.clone()])?;
 		}
 	}
-	
+
 	ValidatorCount::put(1);
-	
+
 	// Start a new Era
 	let new_validators = Staking::<T>::new_era(SessionIndex::one()).unwrap();
 
@@ -176,9 +199,9 @@ pub fn create_nominator_with_validators<T: Trait>(v: u32) -> Result<(T::AccountI
 	// Create a nominator
 	let (_n_stash, n_controller) = create_stash_controller2::<T>(0)?;
 	Staking::<T>::nominate(RawOrigin::Signed(n_controller.clone()).into(), validator_lookups)?;
-	
+
 	ValidatorCount::put(v);
-	
+
 	// Start a new Era
 	let new_validators = Staking::<T>::new_era(SessionIndex::one()).unwrap();
 
@@ -358,7 +381,7 @@ benchmarks! {
 		MinimumValidatorCount::put(0);
 		create_validators_with_nominators_for_era::<T>(v, n)?;
 		let session_index = SessionIndex::one();
-	}: { 
+	}: {
 		let maybe_validators = Staking::<T>::new_era(session_index).ok_or("`new_era` failed")?;
 		assert!(maybe_validators.len() == v as usize);
 	}
@@ -370,9 +393,9 @@ benchmarks! {
 		MinimumValidatorCount::put(m);
 		create_validators_with_nominators_for_era::<T>(v, n)?;
 		let session_index = SessionIndex::one();
-	}: { 
+	}: {
 		let maybe_validators = Staking::<T>::new_era(session_index).ok_or("`new_era` failed")?;
-		assert!(maybe_validators.len() == m as usize);
+		assert!(maybe_validators.len() == v as usize);
 	}
 
 	do_slash {

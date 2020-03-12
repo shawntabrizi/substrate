@@ -1789,16 +1789,22 @@ impl<T: Trait> Module<T> {
 	///
 	/// Assumes storage is coherent with the declaration.
 	fn select_validators(current_era: EraIndex) -> Option<Vec<T::AccountId>> {
+		t_start!(prepare);
 		let mut all_nominators: Vec<(T::AccountId, Vec<T::AccountId>)> = Vec::new();
 		let mut all_validators_and_prefs = BTreeMap::new();
 		let mut all_validators = Vec::new();
+		let mut count = 0;
+		let mut edges = 0;
+		let mut noms = 0;
 		for (validator, preference) in <Validators<T>>::enumerate() {
 			let self_vote = (validator.clone(), vec![validator.clone()]);
 			all_nominators.push(self_vote);
 			all_validators_and_prefs.insert(validator.clone(), preference);
 			all_validators.push(validator);
+			count += 1;
 		}
 
+		t_start!(iterating_nominators);
 		let nominator_votes = <Nominators<T>>::enumerate().map(|(nominator, nominations)| {
 			let Nominations { submitted_in, mut targets, suppressed: _ } = nominations;
 
@@ -1810,11 +1816,18 @@ impl<T: Trait> Module<T> {
 					|spans| submitted_in >= spans.last_nonzero_slash(),
 				)
 			});
-
+			edges += targets.len();
+			noms += 1;
 			(nominator, targets)
 		});
 		all_nominators.extend(nominator_votes);
+		t_stop!(iterating_nominators);
+		println!("+ validator count = {:?}", count);
+		println!("+ nominator count = {:?}", noms);
+		println!("+ edge count = {:?}", edges);
+		t_stop!(prepare);
 
+		t_start!(phragmen);
 		let maybe_phragmen_result = sp_phragmen::elect::<_, _, _, T::CurrencyToVote, Perbill>(
 			Self::validator_count() as usize,
 			Self::minimum_validator_count().max(1) as usize,
@@ -1822,7 +1835,9 @@ impl<T: Trait> Module<T> {
 			all_nominators,
 			Self::slashable_balance_of,
 		);
+		t_stop!(phragmen);
 
+		t_start!(post);
 		if let Some(phragmen_result) = maybe_phragmen_result {
 			let elected_stashes = phragmen_result.winners.into_iter()
 				.map(|(s, _)| s)
@@ -1892,6 +1907,7 @@ impl<T: Trait> Module<T> {
 			// that we must return the new validator set even if it's the same as the old,
 			// as long as any underlying economic conditions have changed, we don't attempt
 			// to do any optimization where we compare against the prior set.
+			t_stop!(post);
 			Some(elected_stashes)
 		} else {
 			// There were not enough candidates for even our minimal level of functionality.
@@ -1900,6 +1916,7 @@ impl<T: Trait> Module<T> {
 			// and let the chain keep producing blocks until we can decide on a sufficiently
 			// substantial set.
 			// TODO: #2494
+			t_stop!(post);
 			None
 		}
 	}
