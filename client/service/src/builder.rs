@@ -77,7 +77,7 @@ impl ServiceMetrics {
 				"ready_transactions_number", "Number of transactions in the ready queue",
 			)?, registry)?,
 			memory_usage_bytes: register(Gauge::new(
-				"memory_usage_bytes", "Node memory usage",
+				"memory_usage_bytes", "Node memory (resident set size) usage",
 			)?, registry)?,
 			cpu_usage_percentage: register(Gauge::new(
 				"cpu_usage_percentage", "Node CPU usage",
@@ -263,6 +263,7 @@ fn new_full_parts<TBl, TRtApi, TExecDisp>(
 			fork_blocks,
 			bad_blocks,
 			extensions,
+			Box::new(tasks_builder.spawn_handle()),
 			config.prometheus_config.as_ref().map(|config| config.registry.clone()),
 		)?
 	};
@@ -366,6 +367,7 @@ impl ServiceBuilder<(), (), (), (), (), (), (), (), (), (), ()> {
 			sc_client::light::new_fetch_checker::<_, TBl, _>(
 				light_blockchain.clone(),
 				executor.clone(),
+				Box::new(tasks_builder.spawn_handle()),
 			),
 		);
 		let fetcher = Arc::new(sc_network::config::OnDemand::new(fetch_checker));
@@ -375,6 +377,7 @@ impl ServiceBuilder<(), (), (), (), (), (), (), (), (), (), ()> {
 			backend.clone(),
 			config.expect_chain_spec().as_storage_builder(),
 			executor,
+			Box::new(tasks_builder.spawn_handle()),
 			config.prometheus_config.as_ref().map(|config| config.registry.clone()),
 		)?);
 
@@ -824,7 +827,7 @@ ServiceBuilder<
 		let chain_spec = config.expect_chain_spec();
 
 		let version = config.full_version();
-		info!("Highest known block at #{}", chain_info.best_number);
+		info!("📦 Highest known block at #{}", chain_info.best_number);
 		telemetry!(
 			SUBSTRATE_INFO;
 			"node.start";
@@ -1071,7 +1074,8 @@ ServiceBuilder<
 					.unwrap_or(0),
 			);
 			if let Some(metrics) = metrics.as_ref() {
-				metrics.memory_usage_bytes.set(memory);
+				// `sysinfo::Process::memory` returns memory usage in KiB and not bytes.
+				metrics.memory_usage_bytes.set(memory * 1024);
 				metrics.cpu_usage_percentage.set(f64::from(cpu_usage));
 				metrics.ready_transactions_number.set(txpool_status.ready as u64);
 
@@ -1200,6 +1204,7 @@ ServiceBuilder<
 				network_status_sinks.clone(),
 				system_rpc_rx,
 				has_bootnodes,
+				config.announce_block,
 			),
 		);
 
