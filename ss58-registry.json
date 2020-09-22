@@ -137,6 +137,15 @@
 			"website": "https://www.substratee.com"
 		},
 		{
+			"prefix": 15,
+			"network": "synesthesia",
+			"displayName": "Synesthesia",
+			"symbols": ["SYN"],
+			"decimals": [12],
+			"standardAccount": "*25519",
+			"website": null,
+		},
+		{
 			"prefix": 16,
 			"network": "kulupu",
 			"displayName": "Kulupu",
