@@ -8,7 +8,7 @@ use frame_support::weights::{Weight, constants::RocksDbWeight as DbWeight};
 pub struct WeightInfo;
 impl pallet_balances::WeightInfo for WeightInfo {
 	fn transfer() -> Weight {
-		(171_000_000 as Weight)
+		(170_000_000 as Weight)
 			.saturating_add(DbWeight::get().reads(1 as Weight))
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
@@ -18,7 +18,7 @@ impl pallet_balances::WeightInfo for WeightInfo {
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
 	fn set_balance_creating() -> Weight {
-		(55_000_000 as Weight)
+		(56_000_000 as Weight)
 			.saturating_add(DbWeight::get().reads(1 as Weight))
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
@@ -28,7 +28,7 @@ impl pallet_balances::WeightInfo for WeightInfo {
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
 	fn force_transfer() -> Weight {
-		(129_000_000 as Weight)
+		(135_000_000 as Weight)
 			.saturating_add(DbWeight::get().reads(2 as Weight))
 			.saturating_add(DbWeight::get().writes(2 as Weight))
 	}
